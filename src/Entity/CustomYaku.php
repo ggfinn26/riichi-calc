@@ -15,13 +15,12 @@ class CustomYaku
      * Contoh: ['allowed_suits' => ['pin'], 'must_be_menzen' => true]
      */
     private array $conditions;
-
-    private bool $isActive;
     private \DateTime $createdAt;
     private \DateTime $updatedAt;
     private int $createdByUserId;
+    private bool $isDeleted;
 
-    public function __construct(int $id, string $name, string $description, int $hanClosed, int $hanOpened, bool $isYakuman, array $conditions, bool $isActive, \DateTime $createdAt, \DateTime $updatedAt, int $createdByUserId)
+    public function __construct(int $id, string $name, string $description, int $hanClosed, int $hanOpened, bool $isYakuman, array $conditions, \DateTime $createdAt, \DateTime $updatedAt, int $createdByUserId, bool $isDeleted)
     {
         $this->id = $id;
         $this->name = $name;
@@ -30,10 +29,10 @@ class CustomYaku
         $this->hanOpened = $hanOpened;
         $this->isYakuman = $isYakuman;
         $this->conditions = $conditions;
-        $this->isActive = $isActive;
         $this->createdAt = $createdAt;
         $this->updatedAt = $updatedAt;
         $this->createdByUserId = $createdByUserId;
+        $this->isDeleted = $isDeleted;
     }
 
     // ... (Getters yang Anda buat sudah benar dan dipertahankan) ...
@@ -65,10 +64,6 @@ class CustomYaku
     {
         return $this->conditions;
     }
-    public function isActive(): bool
-    {
-        return $this->isActive;
-    }
     public function getCreatedAt(): \DateTime
     {
         return $this->createdAt;
@@ -81,21 +76,16 @@ class CustomYaku
     {
         return $this->createdByUserId;
     }
+    public function isDeleted(): bool
+    {
+        return $this->isDeleted;
+    }
 
     // --- SMART ACTION METHODS ---
 
     private function markAsUpdated(): void
     {
         $this->updatedAt = new \DateTime();
-    }
-
-    /**
-     * Mematikan atau menyalakan Custom Yaku ini
-     */
-    public function toggleActive(): void
-    {
-        $this->isActive = !$this->isActive;
-        $this->markAsUpdated();
     }
 
     /**
@@ -106,5 +96,9 @@ class CustomYaku
         $this->description = $newDescription;
         $this->conditions = $newConditions;
         $this->markAsUpdated();
+    }
+
+    public function delete(): void{
+        $this->isDeleted = true;
     }
 }
