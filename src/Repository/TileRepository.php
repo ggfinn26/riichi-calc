@@ -25,7 +25,7 @@ class TileRepository implements TileRepositoryInterface
             $row['value'],
             $row['unicode'],
             $row['type'],
-            $row['color']
+            json_decode($row['colors'], true) ?? []
         );
     }
 
@@ -106,7 +106,7 @@ class TileRepository implements TileRepositoryInterface
      */
     public function findByColor(string $color): array
     {
-        $sql = "SELECT * FROM tiles WHERE color = ?";
+        $sql = "SELECT * FROM tiles WHERE JSON_CONTAINS(colors, JSON_QUOTE(?))";
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(1, $color, \PDO::PARAM_STR);
         $stmt->execute();

@@ -45,6 +45,26 @@ class DiscardedPile
     {
         return $this->gameContextId;
     }
+
+    /**
+     * Dipakai oleh repository setelah INSERT untuk mempromosikan entity
+     * dari transient ke persisted (in-place), agar discard pile di parent
+     * tidak ter-INSERT ulang pada save() berikutnya.
+     */
+    public function setId(int $id): void
+    {
+        $this->id = $id;
+    }
+
+    /**
+     * Sinkronisasi parent ID saat cascade save dari GameContextRepository:
+     * discard yang baru di-register lewat registerDiscard() belum tahu
+     * game_context_id final jika parent baru ter-INSERT bersamaan.
+     */
+    public function setGameContextId(int $gameContextId): void
+    {
+        $this->gameContextId = $gameContextId;
+    }
     public function getUserId(): int
     {
         return $this->userId;

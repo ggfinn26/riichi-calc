@@ -23,7 +23,8 @@ class YakuRepository implements YakuRepositoryInterface
             $row["description"],
             (int) $row["han_closed"],
             (int) $row["han_opened"],
-            (bool) $row["is_yakuman"]
+            (bool) $row["is_yakuman"],
+            $row["conditions"] ?? null
         );
     }
 

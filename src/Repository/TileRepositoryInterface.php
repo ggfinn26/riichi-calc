@@ -30,7 +30,7 @@ interface TileRepositoryInterface
     public function findByType(string $type): array;
 
     /**
-     * Mengambil sekumpulan batu berdasarkan label warna visualnya
+     * Mengambil sekumpulan batu yang memiliki warna tertentu
      * * @return Tile[]
      */
     public function findByColor(string $color): array;

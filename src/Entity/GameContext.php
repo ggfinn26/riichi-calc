@@ -6,6 +6,7 @@ class GameContext
 {
     private int $id;
     private int $gameId;
+    private bool $isAkaAri;
 
     // --- STATUS PERMAINAN ---
     private string $status;
@@ -46,7 +47,11 @@ class GameContext
         int $currentTurnUserId,
         string $status,
         int $honba = 0,
-        int $riichiSticks = 0
+        int $riichiSticks = 0,
+        int $kanCount = 0,
+        int $leftWallTiles = 70,
+        int $nextTurnOrderIndex = 1,
+        bool $isAkaAri = true
     ) {
         $this->id = $id;
         $this->gameId = $gameId;
@@ -57,21 +62,32 @@ class GameContext
         $this->status = $status;
         $this->honba = $honba;
         $this->riichiSticks = $riichiSticks;
+        $this->kanCount = $kanCount;
+        $this->leftWallTiles = $leftWallTiles;
+        $this->nextTurnOrderIndex = $nextTurnOrderIndex;
+        $this->isAkaAri = $isAkaAri;
 
         // Inisialisasi default agar tidak error
-        $this->nextTurnOrderIndex = 1;
-        $this->leftWallTiles = 70; // Standar sisa batu awal setelah 13x4 ditarik + 14 dead wall
         $this->doraIndicators = [];
         $this->discardPile = [];
         $this->hands = [];
         $this->activeCustomYakus = [];
-        $this->kanCount = 0;
     }
 
     // --- GETTERS ---
     public function getId(): int
     {
         return $this->id;
+    }
+
+    /**
+     * Dipakai oleh repository setelah INSERT untuk mempromosikan entity
+     * dari transient (id=0) ke persisted tanpa kehilangan relasi yang
+     * sudah dirakit di memori (hands, discards, dora, dst).
+     */
+    public function setId(int $id): void
+    {
+        $this->id = $id;
     }
     public function getGameId(): int
     {
@@ -113,6 +129,15 @@ class GameContext
     {
         return $this->leftWallTiles;
     }
+    public function getKanCount(): int
+    {
+        return $this->kanCount;
+    }
+
+    public function isAkaAri(): bool
+    {
+        return $this->isAkaAri;
+    }
 
     /** @return Tile[] */
     public function getDoraIndicators(): array
@@ -152,6 +177,20 @@ class GameContext
     {
         $this->discardPile[] = $discard;
         $this->nextTurnOrderIndex++;
+    }
+
+    /**
+     * Push discard saat hidrasi dari DB — tanpa menambah nextTurnOrderIndex
+     * (nilai itu sudah dimuat dari kolom).
+     */
+    public function restoreDiscard(DiscardedPile $discard): void
+    {
+        $this->discardPile[] = $discard;
+    }
+
+    public function addActiveCustomYaku(CustomYaku $yaku): void
+    {
+        $this->activeCustomYakus[] = $yaku;
     }
 
     public function addHand(Hand $hand): void

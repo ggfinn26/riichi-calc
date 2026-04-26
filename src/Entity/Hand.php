@@ -46,6 +46,26 @@ class Hand
     {
         return $this->gameContextId;
     }
+
+    /**
+     * Dipakai oleh repository setelah INSERT untuk mempromosikan entity
+     * dari transient ke persisted (in-place), agar collection di parent
+     * tidak perlu di-rebuild.
+     */
+    public function setId(int $id): void
+    {
+        $this->id = $id;
+    }
+
+    /**
+     * Sinkronisasi parent ID saat cascade save dari GameContextRepository:
+     * Hand dirakit di memori sebelum parent punya ID, jadi perlu di-relink
+     * setelah parent ter-INSERT.
+     */
+    public function setGameContextId(int $gameContextId): void
+    {
+        $this->gameContextId = $gameContextId;
+    }
     public function getUserId(): int
     {
         return $this->userId;
@@ -109,6 +129,20 @@ class Hand
 
         $this->isRiichiDeclared = true;
         $this->riichiDiscardId = $discardActionId;
+    }
+
+    /**
+     * Restore status Riichi dari DB tanpa cek Menzen (faktanya sudah persisted).
+     */
+    public function setRiichiDeclared(bool $isDeclared, ?int $discardActionId): void
+    {
+        $this->isRiichiDeclared = $isDeclared;
+        $this->riichiDiscardId = $discardActionId;
+    }
+
+    public function setNagashiManganDiscardId(?int $id): void
+    {
+        $this->nagashiManganDiscardId = $id;
     }
 
     // --- HELPER LOGIC ---

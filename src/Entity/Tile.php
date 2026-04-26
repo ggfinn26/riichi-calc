@@ -9,18 +9,19 @@ class Tile
     private string $value;
     private string $unicode;
     private string $type;    // 'man', 'pin', 'sou', atau 'honor'
-    private string $color;
+    /** @var string[] */
+    private array $colors;   // Array of colors: ['red', 'green', 'blue', 'black']
 
     // Properti boolean dihapus karena sudah di-handle oleh method di bawah.
 
-    public function __construct(int $id, string $name, string $value, string $unicode, string $type, string $color)
+    public function __construct(int $id, string $name, string $value, string $unicode, string $type, array $colors)
     {
         $this->id = $id;
         $this->name = $name;
         $this->value = $value;
         $this->unicode = $unicode;
         $this->type = $type;
-        $this->color = $color;
+        $this->colors = $colors;
     }
     
     // --- BASIC GETTERS ---
@@ -30,7 +31,14 @@ class Tile
     public function getValue(): string { return $this->value; }
     public function getUnicode(): string { return $this->unicode; }
     public function getType(): string { return $this->type; }
-    public function getColor(): string { return $this->color; }
+    
+    /** @return string[] */
+    public function getColors(): array { return $this->colors; }
+
+    public function hasColor(string $color): bool
+    {
+        return in_array($color, $this->colors);
+    }
 
     // --- SMART LOGIC ---
 
@@ -55,12 +63,24 @@ class Tile
     {
         // 1. Cek apakah ini batu angka
         $isNumberSuit = in_array($this->type, ['man', 'pin', 'sou']);
-        
+
         // 2. Ubah tipe data value menjadi integer (angka) dengan (int) lalu bandingkan
         $numericValue = (int)$this->value;
         $isBetweenTwoAndEight = $numericValue >= 2 && $numericValue <= 8;
 
         // Harus keduanya benar
         return $isNumberSuit && $isBetweenTwoAndEight;
+    }
+
+    public function isEvenNumber(): bool
+    {
+        if ($this->isHonor()) return false;
+        return (int)$this->value % 2 === 0;
+    }
+
+    public function isGreen(): bool
+    {
+        // "Hijau murni": warnanya tepat ['green'] saja — dipakai untuk syarat Ryuuiisou
+        return $this->colors === ['green'];
     }
 }

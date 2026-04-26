@@ -7,18 +7,19 @@ class Meld
     private int $id;
     private int $gameContextId;
     private int $userId;
+    private int $handId;
     private string $type;
     private bool $isClosed;
 
     /** @var Tile[] */
     private array $tiles;
 
-    // Array $hand DIHAPUS dari constructor dan properti. Meld tidak butuh data Hand.
-    public function __construct(int $id, int $gameContextId, int $userId, string $type, bool $isClosed, array $tiles)
+    public function __construct(int $id, int $gameContextId, int $userId, int $handId, string $type, bool $isClosed, array $tiles)
     {
         $this->id = $id;
         $this->gameContextId = $gameContextId;
         $this->userId = $userId;
+        $this->handId = $handId;
         $this->type = $type;
         $this->isClosed = $isClosed;
         $this->tiles = $tiles;
@@ -37,6 +38,10 @@ class Meld
     public function getUserId(): int
     {
         return $this->userId;
+    }
+    public function getHandId(): int
+    {
+        return $this->handId;
     }
     public function getType(): string
     {

@@ -11,8 +11,9 @@ class Yaku
     private int $hanClosed;
     private int $hanOpened;
     private bool $isYakuman;
+    private ?string $conditions;
 
-    public function __construct(int $id, string $nameJp, string $nameEng, string $description, int $hanClosed, int $hanOpened, bool $isYakuman)
+    public function __construct(int $id, string $nameJp, string $nameEng, string $description, int $hanClosed, int $hanOpened, bool $isYakuman, ?string $conditions = null)
     {
         $this->id = $id;
         $this->nameJp = $nameJp;
@@ -21,6 +22,7 @@ class Yaku
         $this->hanClosed = $hanClosed;
         $this->hanOpened = $hanOpened;
         $this->isYakuman = $isYakuman;
+        $this->conditions = $conditions;
     }
 
     //Getter
@@ -50,5 +52,8 @@ class Yaku
         return $this->isYakuman;
     }
 
-
+    public function getConditions(): ?string
+    {
+        return $this->conditions;
+    }
 }
