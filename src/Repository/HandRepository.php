@@ -238,6 +238,40 @@ class HandRepository implements HandRepositoryInterface
         }
     }
 
+    public function findHistoryByUserId(int $userId): array
+    {
+        $sql = "SELECT h.id              AS hand_id,
+                       h.game_context_id AS game_context_id,
+                       gc.game_id        AS game_id,
+                       gc.round_number   AS round_number,
+                       gc.round_wind     AS round_wind,
+                       gc.status         AS status,
+                       h.is_dealer       AS is_dealer,
+                       h.is_riichi_declared AS is_riichi_declared
+                FROM hands h
+                INNER JOIN game_contexts gc ON gc.id = h.game_context_id
+                WHERE h.user_id = ?
+                ORDER BY gc.id DESC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$userId]);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $history = [];
+        foreach ($rows as $row) {
+            $history[] = [
+                'hand_id'            => (int)  $row['hand_id'],
+                'game_context_id'    => (int)  $row['game_context_id'],
+                'game_id'            => (int)  $row['game_id'],
+                'round_number'       => (int)  $row['round_number'],
+                'round_wind'         => (string) $row['round_wind'],
+                'status'             => (string) $row['status'],
+                'is_dealer'          => (bool) $row['is_dealer'],
+                'is_riichi_declared' => (bool) $row['is_riichi_declared'],
+            ];
+        }
+        return $history;
+    }
+
     private function hydrateWithRelations(array $row): Hand
     {
         $hand = $this->hydrate($row);

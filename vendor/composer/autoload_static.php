@@ -11,6 +11,8 @@ class ComposerStaticInitc914946ecb7f71cb8bce9aa2e8a28791
         '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
         '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
         'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
+        '253c157292f75eb38082b5acb06f3f01' => __DIR__ . '/..' . '/nikic/fast-route/src/functions.php',
+        'b33e3d135e5d9e47d845c576147bda89' => __DIR__ . '/..' . '/php-di/php-di/src/functions.php',
         'ec07570ca5a812141189b1fa81503674' => __DIR__ . '/..' . '/phpunit/phpunit/src/Framework/Assert/Functions.php',
     );
 
@@ -23,18 +25,37 @@ class ComposerStaticInitc914946ecb7f71cb8bce9aa2e8a28791
         ),
         'P' =>
         array (
+            'Psr\\Log\\' => 8,
+            'Psr\\Container\\' => 14,
             'PhpParser\\' => 10,
             'PhpOption\\' => 10,
+        ),
+        'M' =>
+        array (
+            'Monolog\\' => 8,
+        ),
+        'L' =>
+        array (
+            'Laravel\\SerializableClosure\\' => 28,
+        ),
+        'I' =>
+        array (
+            'Invoker\\' => 8,
         ),
         'G' =>
         array (
             'GrahamCampbell\\ResultType\\' => 26,
+        ),
+        'F' =>
+        array (
+            'FastRoute\\' => 10,
         ),
         'D' =>
         array (
             'Dotenv\\' => 7,
             'Dewa\\Mahjong\\' => 13,
             'DeepCopy\\' => 9,
+            'DI\\' => 3,
         ),
     );
 
@@ -51,6 +72,14 @@ class ComposerStaticInitc914946ecb7f71cb8bce9aa2e8a28791
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-ctype',
         ),
+        'Psr\\Log\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/psr/log/src',
+        ),
+        'Psr\\Container\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/psr/container/src',
+        ),
         'PhpParser\\' =>
         array (
             0 => __DIR__ . '/..' . '/nikic/php-parser/lib/PhpParser',
@@ -59,9 +88,25 @@ class ComposerStaticInitc914946ecb7f71cb8bce9aa2e8a28791
         array (
             0 => __DIR__ . '/..' . '/phpoption/phpoption/src/PhpOption',
         ),
+        'Monolog\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/monolog/monolog/src/Monolog',
+        ),
+        'Laravel\\SerializableClosure\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/laravel/serializable-closure/src',
+        ),
+        'Invoker\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/php-di/invoker/src',
+        ),
         'GrahamCampbell\\ResultType\\' =>
         array (
             0 => __DIR__ . '/..' . '/graham-campbell/result-type/src',
+        ),
+        'FastRoute\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/nikic/fast-route/src',
         ),
         'Dotenv\\' =>
         array (
@@ -74,6 +119,10 @@ class ComposerStaticInitc914946ecb7f71cb8bce9aa2e8a28791
         'DeepCopy\\' =>
         array (
             0 => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy',
+        ),
+        'DI\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/php-di/php-di/src',
         ),
     );
 

@@ -1,0 +1,487 @@
+openapi: "3.1.0"
+
+info:
+  title: Riichi Mahjong Calculator API
+  description: |
+    REST API untuk kalkulator skor Riichi Mahjong.
+    
+    **Request Lifecycle:**
+    `CORS → RateLimit → Auth → Router → DTO Validation → Service → Response`
+    
+    Semua request body menggunakan `application/json`.  
+    Semua respons dikembalikan sebagai `application/json`.
+  version: "1.0.0"
+  contact:
+    name: ggfinn26
+    email: baristasastra@gmail.com
+
+servers:
+  - url: http://localhost/riichi-calc/public/api
+    description: XAMPP Local
+
+tags:
+  - name: Score
+    description: Kalkulasi skor dan evaluasi yaku
+  - name: Game
+    description: Query state permainan dan tangan
+  - name: Action
+    description: Aksi pemain (draw, discard, riichi, call)
+  - name: Round
+    description: Siklus ronde (selesai, rotasi dealer)
+
+# ── Security ──────────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: "Aktif hanya jika AUTH_ENABLED=true di .env"
+
+  schemas:
+
+    TileSummary:
+      type: object
+      properties:
+        id:      { type: integer, example: 1 }
+        name:    { type: string,  example: "1-man" }
+        unicode: { type: string,  example: "🀇" }
+        type:    { type: string,  enum: [man, pin, sou, honor] }
+
+    YakuSummary:
+      type: object
+      properties:
+        id:         { type: integer, example: 1 }
+        name_jp:    { type: string,  example: "立直" }
+        name_eng:   { type: string,  example: "Riichi" }
+        han_closed: { type: integer, example: 1 }
+        han_opened: { type: integer, example: 0 }
+        is_yakuman: { type: boolean, example: false }
+
+    Payment:
+      type: object
+      properties:
+        from_deal_in:    { type: integer, example: 3900 }
+        from_dealer:     { type: integer, example: 0 }
+        from_non_dealer: { type: integer, example: 0 }
+        total:           { type: integer, example: 3900 }
+
+    ScoreResult:
+      type: object
+      properties:
+        han:                { type: integer, example: 3 }
+        fu:                 { type: integer, example: 40 }
+        fu_breakdown:
+          type: object
+          additionalProperties: { type: integer }
+          example: { "base_fu": 30, "tsumo": 2, "pair_yakuhai": 4, "open_pon_terminal": 4 }
+        yaku_list:
+          type: array
+          items: { $ref: "#/components/schemas/YakuSummary" }
+        base_points:        { type: integer, example: 3200 }
+        limit_name:
+          type: string
+          nullable: true
+          enum: [mangan, haneman, baiman, sanbaiman, yakuman, null]
+        yakuman_multiplier: { type: integer, example: 0 }
+        payment:            { $ref: "#/components/schemas/Payment" }
+        honba_bonus:        { type: integer, example: 300 }
+        riichi_stick_bonus: { type: integer, example: 1000 }
+        final_total:        { type: integer, example: 5200 }
+
+    Error:
+      type: object
+      properties:
+        error: { type: string, example: "Field 'hand_id' must be > 0." }
+
+    ValidationError:
+      type: object
+      properties:
+        error: { type: string }
+        type:  { type: string, example: "validation_error" }
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+paths:
+
+  # ── Score ──────────────────────────────────────────────────────────────────
+
+  /score/calculate:
+    post:
+      tags: [Score]
+      summary: Hitung skor akhir (han/fu/payment)
+      description: |
+        Menghitung skor lengkap dari sebuah tangan menang.
+        Caller wajib menyuplai `yaku_ids` (hasil dari `/score/evaluate-yaku`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [game_context_id, hand_id, winning_tile_id, yaku_ids]
+              properties:
+                game_context_id:  { type: integer, example: 1 }
+                hand_id:          { type: integer, example: 5 }
+                winning_tile_id:  { type: integer, minimum: 1, maximum: 34, example: 12 }
+                is_tsumo:         { type: boolean, default: false }
+                yaku_ids:
+                  type: array
+                  minItems: 1
+                  items: { type: integer }
+                  example: [1, 3]
+                dora_count:       { type: integer, minimum: 0, maximum: 12, default: 0 }
+                is_pinfu:         { type: boolean, default: false }
+                honba_count:      { type: integer, minimum: 0, default: 0 }
+                riichi_sticks:    { type: integer, minimum: 0, maximum: 4, default: 0 }
+                pao_player_id:    { type: integer, nullable: true }
+                pao_yakuman_type:
+                  type: string
+                  nullable: true
+                  enum: [daisangen, daisuushii, suukantsu]
+      responses:
+        "200":
+          description: Hasil kalkulasi skor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScoreResult" }
+        "422": { description: Validation error,  content: { application/json: { schema: { $ref: "#/components/schemas/ValidationError" } } } }
+        "400": { description: Bad request,       content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "429": { description: Rate limit exceeded }
+
+  /score/evaluate-yaku:
+    post:
+      tags: [Score]
+      summary: Deteksi yaku dari tangan
+      description: |
+        Mengevaluasi yaku mana yang valid dari kondisi tangan saat ini.
+        Hasil `yakus[].id` bisa langsung dipakai sebagai `yaku_ids` di `/score/calculate`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [game_context_id, hand_id, winning_tile_id]
+              properties:
+                game_context_id: { type: integer, example: 1 }
+                hand_id:         { type: integer, example: 5 }
+                winning_tile_id: { type: integer, minimum: 1, maximum: 34, example: 12 }
+                is_tsumo:        { type: boolean, default: false }
+                is_riichi:       { type: boolean, default: false }
+      responses:
+        "200":
+          description: Daftar yaku yang terdeteksi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  yakus:     { type: array, items: { $ref: "#/components/schemas/YakuSummary" } }
+                  total_han: { type: integer, example: 3 }
+        "422": { description: Validation error }
+        "400": { description: Entity not found }
+
+  # ── Game Queries ───────────────────────────────────────────────────────────
+
+  /game/{id}:
+    get:
+      tags: [Game]
+      summary: Ambil state GameContext (ronde aktif)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: GameContext dengan hands dan dora
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:                    { type: integer }
+                  game_id:               { type: integer }
+                  round_number:          { type: integer }
+                  round_wind:            { type: string, enum: [east, south, west, north] }
+                  dealer_id:             { type: integer }
+                  current_turn_user_id:  { type: integer }
+                  status:                { type: string, enum: [active, finished] }
+                  honba:                 { type: integer }
+                  riichi_sticks:         { type: integer }
+                  kan_count:             { type: integer }
+                  left_wall_tiles:       { type: integer }
+                  next_turn_order_index: { type: integer }
+                  is_aka_ari:            { type: boolean }
+                  dora_indicators:
+                    type: array
+                    items: { $ref: "#/components/schemas/TileSummary" }
+                  hands:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:                 { type: integer }
+                        user_id:            { type: integer }
+                        is_dealer:          { type: boolean }
+                        is_riichi_declared: { type: boolean }
+                        tile_count:         { type: integer }
+        "400": { description: GameContext not found }
+
+  /hand/{id}:
+    get:
+      tags: [Game]
+      summary: Ambil isi tangan pemain (tiles, melds, waits)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Isi tangan lengkap + tiles yang ditunggu (machi)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:                   { type: integer }
+                  game_context_id:      { type: integer }
+                  user_id:              { type: integer }
+                  is_dealer:            { type: boolean }
+                  is_menzen:            { type: boolean }
+                  is_riichi_declared:   { type: boolean }
+                  riichi_discard_id:    { type: integer, nullable: true }
+                  tile_count_logical:   { type: integer }
+                  tile_count_physical:  { type: integer }
+                  tiles:
+                    type: array
+                    items: { $ref: "#/components/schemas/TileSummary" }
+                  melds:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:        { type: integer }
+                        type:      { type: string, enum: [chi, pon, daiminkan, ankan, shouminkan] }
+                        is_closed: { type: boolean }
+                        tiles:     { type: array, items: { $ref: "#/components/schemas/TileSummary" } }
+                  waits:
+                    type: array
+                    description: Tiles yang akan menyempurnakan tangan (machi)
+                    items: { $ref: "#/components/schemas/TileSummary" }
+        "400": { description: Hand not found }
+
+  # ── Player Actions ─────────────────────────────────────────────────────────
+
+  /action/draw:
+    post:
+      tags: [Action]
+      summary: Pemain menarik batu dari dinding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [game_context_id, user_id, tile_id]
+              properties:
+                game_context_id: { type: integer, example: 1 }
+                user_id:         { type: integer, example: 3 }
+                tile_id:         { type: integer, minimum: 1, maximum: 34, example: 17 }
+      responses:
+        "200":
+          description: Sukses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        "422": { description: Validation error }
+        "400": { description: Entity not found or state invalid }
+
+  /action/discard:
+    post:
+      tags: [Action]
+      summary: Pemain membuang batu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [game_context_id, user_id, tile_id]
+              properties:
+                game_context_id: { type: integer, example: 1 }
+                user_id:         { type: integer, example: 3 }
+                tile_id:         { type: integer, minimum: 1, maximum: 34, example: 17 }
+                is_tsumogiri:    { type: boolean, default: false }
+      responses:
+        "200":
+          description: Discard berhasil disimpan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:     { type: boolean }
+                  discard_id:  { type: integer }
+                  tile_id:     { type: integer }
+                  order_index: { type: integer }
+        "422": { description: Validation error }
+        "400": { description: Entity not found }
+
+  /action/riichi:
+    post:
+      tags: [Action]
+      summary: Deklarasi Riichi
+      description: |
+        Panggil ini SETELAH `/action/discard` berhasil.
+        Gunakan `discard_id` dari respons discard sebagai `discard_action_id`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hand_id, discard_action_id]
+              properties:
+                hand_id:           { type: integer, example: 5 }
+                discard_action_id: { type: integer, example: 22 }
+      responses:
+        "200":
+          description: Riichi berhasil dideklarasi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        "422": { description: Validation error }
+        "400": { description: Tangan tidak memenuhi syarat Riichi (bukan Menzen) }
+
+  /action/call:
+    post:
+      tags: [Action]
+      summary: Chi / Pon / Kan call
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hand_id, meld_type, called_tile_id, tile_ids_from_hand]
+              properties:
+                hand_id:
+                  type: integer
+                  example: 5
+                meld_type:
+                  type: string
+                  enum: [chi, pon, daiminkan, ankan, shouminkan]
+                  example: pon
+                called_tile_id:
+                  type: integer
+                  minimum: 1
+                  maximum: 34
+                  example: 12
+                tile_ids_from_hand:
+                  type: array
+                  minItems: 2
+                  maxItems: 3
+                  items: { type: integer, minimum: 1, maximum: 34 }
+                  example: [12, 12]
+                is_closed:
+                  type: boolean
+                  default: false
+      responses:
+        "200":
+          description: Meld berhasil dibentuk
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  meld_id: { type: integer }
+                  type:    { type: string }
+                  tiles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:   { type: integer }
+                        name: { type: string }
+        "422": { description: Validation error (tile ID out of range, wrong meld_type) }
+        "400": { description: Invalid meld tile count or entity not found }
+
+  # ── Round ──────────────────────────────────────────────────────────────────
+
+  /round/resolve:
+    post:
+      tags: [Round]
+      summary: Selesaikan ronde dan inisialisasi ronde berikutnya
+      description: |
+        **end_type values:**
+        - `agari` — ada pemain menang (wajib sertakan `winner_user_id`)
+        - `ryuukyoku` — dinding habis; hitung no-ten bappu
+        - `chombo` — pelanggaran aturan
+        - `suukaikan` — abort draw karena 4 kan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [game_context_id, end_type]
+              properties:
+                game_context_id:
+                  type: integer
+                  example: 1
+                end_type:
+                  type: string
+                  enum: [agari, ryuukyoku, chombo, suukaikan]
+                  example: agari
+                winner_user_id:
+                  type: integer
+                  nullable: true
+                  description: "Wajib ketika end_type = 'agari'"
+                  example: 3
+      responses:
+        "200":
+          description: Ronde diselesaikan, GameContext baru dibuat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:         { type: boolean }
+                  next_context_id: { type: integer }
+                  dealer_retained: { type: boolean }
+                  honba:           { type: integer }
+                  noten_bappu:
+                    type: object
+                    description: "userId → signed points (+ menerima, - membayar)"
+                    additionalProperties: { type: integer }
+                    example: { "3": 1500, "4": -1500 }
+        "422": { description: Validation error }
+        "400": { description: Entity not found }
+
+  # ── Health ─────────────────────────────────────────────────────────────────
+
+  /health:
+    get:
+      tags: [Game]
+      summary: Health check
+      responses:
+        "200":
+          description: Server up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:    { type: string, example: ok }
+                  app:       { type: string }
+                  timestamp: { type: string, format: date-time }
